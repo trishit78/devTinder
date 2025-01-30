@@ -2,7 +2,146 @@ const express = require("express");
 
 const app = express();
 
-require("./config/databse")
+const User = require("./models/user");
+
+app.use(express.json());  // used as a middleware to read the req.body 
+
+app.post("/signup", async (req,res)=>{
+
+    const user = new User(req.body);
+
+
+
+    // const user = new User({          hardcoded data import
+    //     firstName:"virat",
+    //     lastName:"roy",
+    //     emailId:"roy456@gmail.com",
+    //     password:"roy0987",
+    //     age:21,
+    //     gender:"male"
+    // });
+    
+    
+    try {
+        await user.save();
+        res.send("user added")
+    } catch (error) {
+        res.status(400).send("there is an error"+ error);
+    }
+});
+
+
+
+//update
+app.patch("/update",async(req,res)=>{
+    const userId = req.body._id;
+    console.log(userId)
+    const data = req.body;
+    console.log(data)
+    try {
+
+        // if (!userId) {
+        //     return res.status(400).json({ error: "User ID is required" });
+        // }
+
+        
+
+        // if (!updatedUser) {
+        //     return res.status(404).json({ error: "User not found" });
+        // }
+    await User.findByIdAndUpdate(userId,data,{new:true});
+        res.send("updated the user");
+    }
+     catch (error) {
+        res.status(400).send("something went wrong");
+    }
+})
+
+
+
+
+
+
+//delete a user
+app.delete("/delete",async (req,res)=>{
+    const delUser = req.body._id;
+    try {
+     const users = await User.findByIdAndDelete(delUser);
+        res.send("user deleted");
+    } catch (err) {
+        res.status(404).send("something went wrong");
+    }
+})
+
+
+
+//getting the user (one single user)
+app.get("/userdata", async (req,res)=>{
+
+    //find user by id
+    const userId = req.query._id;
+    console.log(userId)
+    
+    
+    //const userEmail = req.body.emailId;
+    //const users = await User.findOne({emailId:userEmail});
+    try {
+        const users = await User.findById(userId).exec();
+        res.send("found the user with id");
+        
+    } catch (err) {
+        console.log(err)
+    }
+
+    // const userEmail = req.body.emailId;
+    // const users = await User.find({emailId:userEmail});
+    // try {
+    //     if(users.length===0){
+    //     res.status(404).send("user not found");
+    //     }else{
+    //         res.send(users);
+    //     }
+
+        
+    // } catch (error) {
+    //     res.status(400).send("something went wrong");
+    // }
+})
+
+app.get("/feed",async(req,res)=>{
+    const users = await User.find({});
+    try {
+        res.send(users);
+    } catch (error) {
+        res.status(404).send("something went wrong");
+    }
+})
+
+
+
+
+
+
+
+
+//connecting DataBase
+
+const connectDB=require("./config/databse")
+
+connectDB()
+    .then(()=>{
+        console.log("DB connection established...");
+
+        //once I am connected to the DB ,then call the app.listen
+        app.listen(3000,()=>{
+            console.log("listening on port 30000");
+        })
+    })
+    .catch((err)=>{
+        console.error("DB cannot be connected")
+        console.log(err)
+    });
+
 
 //error handling
 
@@ -170,6 +309,6 @@ app.use((req,res)=>{
 
 
 
-app.listen(3001,()=>{
-    console.log("listening on port 3001");
-})
+// app.listen(3001,()=>{
+//     console.log("listening on port 3001");
+// })

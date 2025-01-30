@@ -16,3 +16,6 @@ how express JS basically handles requests behind the scenes
 
 difference app.use() and app.all()
 
+JS object vs JSON
+
+patch vs put
