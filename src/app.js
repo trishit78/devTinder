@@ -4,11 +4,32 @@ const app = express();
 
 const User = require("./models/user");
 
+const bcrypt = require("bcrypt");
+
+const {validateSignUpData} = require("./utils/validation");
+
 app.use(express.json());  // used as a middleware to read the req.body 
 
 app.post("/signup", async (req,res)=>{
 
-    const user = new User(req.body);
+    try {
+    //validation of data 
+    validateSignUpData(req);
+
+
+    //encryption of password
+    const {firstName,lastName,emailId,password} = req.body;
+    const passwordHash =await bcrypt.hash(password,10);
+    console.log(passwordHash)
+
+
+    //creating a new instance of the User model
+    const user = new User({
+        firstName,
+        lastName,
+        emailId,
+        password:passwordHash
+    });
 
 
 
@@ -22,7 +43,6 @@ app.post("/signup", async (req,res)=>{
     // });
     
     
-    try {
         await user.save();
         res.send("user added")
     } catch (error) {
@@ -32,30 +52,91 @@ app.post("/signup", async (req,res)=>{
 
 
 
-//update
-app.patch("/update",async(req,res)=>{
-    const userId = req.body._id;
-    console.log(userId)
-    const data = req.body;
-    console.log(data)
+app.post("/login",async(req,res)=>{
     try {
+        const {firstName,lastName,emailId,password} = req.body;
 
-        // if (!userId) {
-        //     return res.status(400).json({ error: "User ID is required" });
-        // }
-
-        
-
-        // if (!updatedUser) {
-        //     return res.status(404).json({ error: "User not found" });
-        // }
-    await User.findByIdAndUpdate(userId,data,{new:true});
-        res.send("updated the user");
-    }
-     catch (error) {
-        res.status(400).send("something went wrong");
+        const user = await User.findOne({emailId:emailId});
+        if(!user){
+            throw new Error("Invalid credentials");
+        }
+        const isPasswordValid = await bcrypt.compare(password,user.password);
+        if(isPasswordValid){
+            res.send("login valid");
+        }
+        else{
+            throw new Error("Invalid credentials");
+        }
+    } catch (error) {
+        res.status(400).send("something went wrong")
     }
 })
+
+
+//update
+
+app.patch("/update/:userId", async (req, res) => {
+    try {
+        const userId = req.params?.userId;
+        const data = req.body;
+
+        if (!userId) {
+            return res.status(400).json({ error: "User ID is required" });
+        }
+
+        const ALLOWED_UPDATES = ["photoUrl", "about", "gender", "age", "skills"];
+        const isUpdateAllowed = Object.keys(data).every((k) => ALLOWED_UPDATES.includes(k));
+
+        if (!isUpdateAllowed) {
+            return res.status(400).json({ error: "Invalid fields in update request" });
+        }
+
+        const updatedUser = await User.findByIdAndUpdate(userId, data, {
+            new: true,         // Returns updated user
+            runValidators: true // Ensures validation
+        });
+
+        if (!updatedUser) {
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        res.json({ message: "User updated successfully", user: updatedUser });
+    } catch (error) {
+        console.error("UPDATE FAILED:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+// app.patch("/update",async(req,res)=>{
+//     const userId = req.body._id;
+//     const data = req.body;
+
+//     try {
+        
+//         if (!userId) {
+//             return res.status(400).json({ error: "User ID is required" });
+//         }
+        
+//         const ALLOWED_UPDATES = ["userId","photoUrl","about","gender","age","skills"];
+//         const isUpdateAllowed = Object.keys(data).every((k)=>
+//             ALLOWED_UPDATES.includes(k)
+//         );
+//         if(!isUpdateAllowed){
+//             throw new Error("Update not allowed");
+//         }
+        
+        
+//         const updatedUser = await User.findByIdAndUpdate(userId,data,{new:true , runValidators:true});
+
+//         if (!updatedUser) {
+//             return res.status(404).json({ error: "User not found" });
+//         }
+//         res.send("updated the user");
+//     }
+//      catch (error) {
+//         res.status(400).send("UPDATE FAILED" + error.message);
+//     }
+// })
 
 
 
