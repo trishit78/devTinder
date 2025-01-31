@@ -26,7 +26,7 @@ app.post("/signup", async (req,res)=>{
     //encryption of password
     const {firstName,lastName,emailId,password} = req.body;
     const passwordHash =await bcrypt.hash(password,10);
-    console.log(passwordHash)
+    //console.log(passwordHash)
     //creating a new instance of the User model
     const user = new User({
         firstName,
@@ -54,13 +54,12 @@ app.post("/login",async(req,res)=>{
         const isPasswordValid = await bcrypt.compare(password,user.password);
         if(isPasswordValid){
             //creating a jwt token 
-
-            const token = await jwt.sign({_id:user._id},"Trishit");
-            console.log(token)
-
+            const token = await jwt.sign({_id:user._id.toString()}, "Trishit", {expiresIn:"7d"});
 
             //add the token to cookie and send the user back the token
-            res.cookie("token", token);
+            res.cookie("token", token,{
+                expires:new Date(Date.now()+8*3600000),
+            });
             res.send("login successful");
         }
         else{
@@ -83,7 +82,11 @@ app.get("/profile",userAuth,async(req,res)=>{
     }
 })
 
-
+app.post("/sendConnectionRequest",userAuth, async(req,res)=>{
+    const user = req.user;
+    console.log(user);
+    res.send(user.firstName + "sent a connection request");
+})
 
 
 
