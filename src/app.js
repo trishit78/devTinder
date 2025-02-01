@@ -16,80 +16,16 @@ const {userAuth} = require("./middleware/auth");
 
 const {validateSignUpData} = require("./utils/validation");
 
-app.use(express.json());  // used as a middleware to read the req.body 
-
-app.post("/signup", async (req,res)=>{
-
-    try {
-    //validation of data 
-    validateSignUpData(req);
-    //encryption of password
-    const {firstName,lastName,emailId,password} = req.body;
-    const passwordHash =await bcrypt.hash(password,10);
-    //console.log(passwordHash)
-    //creating a new instance of the User model
-    const user = new User({
-        firstName,
-        lastName,
-        emailId,
-        password:passwordHash
-    });
-    
-    
-        await user.save();
-        res.send("user added")
-    } catch (error) {
-        res.status(400).send("there is an error"+ error);
-    }
-});
-
-app.post("/login",async(req,res)=>{
-    try {
-        const {emailId,password} = req.body;
-
-        const user = await User.findOne({emailId:emailId});
-        if(!user){
-            throw new Error("Invalid credentials");
-        }
-        const isPasswordValid = await bcrypt.compare(password,user.password);
-        if(isPasswordValid){
-            //creating a jwt token 
-            const token = await jwt.sign({_id:user._id.toString()}, "Trishit", {expiresIn:"7d"});
-
-            //add the token to cookie and send the user back the token
-            res.cookie("token", token,{
-                expires:new Date(Date.now()+8*3600000),
-            });
-            res.send("login successful");
-        }
-        else{
-            throw new Error("Invalid credentials");
-        }
-    } catch (error) {
-        res.status(400).send("something went wrong")
-    }
-})
-
-app.get("/profile",userAuth,async(req,res)=>{
-    try {
-        
-        const user = req.user
-       
-    res.send("User Found"+  user);
-} 
-    catch (error) {
-        res.status(400).send("Something went wrong" + error)       
-    }
-})
-
-app.post("/sendConnectionRequest",userAuth, async(req,res)=>{
-    const user = req.user;
-    console.log(user);
-    res.send(user.firstName + "sent a connection request");
-})
+app.use(express.json());  // used as a middleware to read the req.body
 
 
+const authRouter = require("./routes/auth");
+const profileRouter = require("./routes/profile");
+const requestRouter = require("./routes/requests");
 
+app.use("/",authRouter);
+app.use("/",profileRouter);
+app.use("/",requestRouter);
 
 
 connectDB()
