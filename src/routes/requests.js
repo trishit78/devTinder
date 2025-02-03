@@ -2,6 +2,7 @@ const express = require("express");
 const { userAuth } = require("../middleware/auth");
 const ConnectionRequest = require("../models/connectionRequest");
 const User = require("../models/user");
+const mongoose = require("mongoose");
 
 const requestRouter = express.Router();
 
@@ -55,5 +56,50 @@ requestRouter.post(
       }
     }
   );
+
+
+
+
+
+requestRouter.post("/request/review/:status/:requestId", userAuth, async(req,res) =>{
+    try {
+        const loggedInUser = req.user;
+        const {status,requestId} = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(requestId)) {
+            return res.status(400).json({ message: "Invalid request ID" });
+        }
+
+        console.log("loggedInUser :  "+ loggedInUser);
+        console.log("status   " + status)
+        console.log("requestId  "  +requestId )
+
+        const allowedStatus = ["accepted","rejected"];
+        if(!allowedStatus.includes(status)){
+            return res.status(400).send("status is not valid");
+        }
+
+        const connectionRequest = await ConnectionRequest.findOne({
+            _id:requestId,
+            toUserId:loggedInUser._id,
+            status:"interested",
+        });
+      //  const connectionRequest = await ConnectionRequest.findById(requestId);
+        console.log(connectionRequest)
+
+        if(!connectionRequest){
+            return res.status(400).json({message:"connectionRequest not found"});
+        }
+        connectionRequest.status = status;
+        const data = await connectionRequest.save();
+
+        res.json({message:"connection request" + status,data});
+
+    } catch (error) {
+        res.status(400).send("Something went wrong" + error);
+    }
+}
+);
+
 
 module.exports = requestRouter; 
